@@ -11,7 +11,7 @@ userRoutes.get('/', function (req, res) {
 
 // USER ROUTES
 userRoutes.get('/user', user.index) // GET ALL USERS 
-userRoutes.get('/user/favorites', user.allFavorites) // RETURN ALL ITEMS FROM FAVORITES LIST
+userRoutes.get('/user/favorites', isAuthUser, user.allFavorites) // RETURN ALL ITEMS FROM FAVORITES LIST
 userRoutes.post('/sign-up/user', user.register) // CREATE NEW USER
 userRoutes.post('/sign-in/user', user.login) // LOGIN USER
 userRoutes.post('/forgot-password', user.forgotPassword) // SEND LINK TO RESET PASSSWORD

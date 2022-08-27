@@ -15,18 +15,22 @@ const productSchema = Schema({
     },
     images: [String],
     publicImages: [String],
-    comments: [
-        {
-            name: String,
-            comment: String,
-        }
-    ],
     seller: {
         type: Schema.Types.ObjectId,
         ref: 'Seller'
     },
+    rating: [{
+        userName: {type: String, default: ''},
+        userId: {type: Schema.Types.ObjectId, ref: 'User'},
+        productRating: {type: Number, default: 0},
+        productReview: {type: String, default: ''}
+    }],
+    ratingNumbers: [Number],
+    ratingSum: {type: Number, default: 0},
+    ratingAverage: {type: Number, default: 0},
     createdAt: String,
     updatedAt: String
 })
+
 productSchema.index({'name': 'text', 'descrip': 'text'})
 module.exports = mongoose.model('Product', productSchema)

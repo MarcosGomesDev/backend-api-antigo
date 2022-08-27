@@ -9,12 +9,12 @@ const productRoutes = express.Router()
 // PRODUCT ROUTES
 productRoutes.get('/products', product.index) // RETURN ALL PRODUCTS
 productRoutes.get('/product', product.oneProduct) // RETURN ONE PRODUCT
-productRoutes.get('/products/search/:name', product.search) // SEARCH ANY PRODUCT
-productRoutes.post('/product/create', upload.array('images', 3), product.create) // CREATE NEW PRODUCT
-productRoutes.post('/product/edit')
-productRoutes.post('/product/:id/comment/new', product.addComment) // ADD NEW ITEM IN COMMENTS LIST
+productRoutes.get('/products/search', product.search) // SEARCH ANY PRODUCT
+productRoutes.post('/product/create', isAuthSeller, upload.array('images', 3), product.create) // CREATE NEW PRODUCT
+productRoutes.post('/product/edit') // EDIT PRODUCT
 productRoutes.post('/product/:id', upload.array('images'), product.update) // UPDATE PRODUCT
-productRoutes.post('/rating', product.addRating)
+productRoutes.post('/rating/:id', isAuthUser, product.addNewRating) // ADD NEW RATING
+productRoutes.put('/product/rating/:id', isAuthUser, product.deleteRating) // DELETE PRODUCT
 productRoutes.delete('/product/:id/delete', product.delete) // DELETE PRODUCT
 
 module.exports = productRoutes

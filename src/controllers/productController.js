@@ -5,6 +5,8 @@ const Category = require('../models/category')
 const subCategory = require('../models/subCategory')
 const cloudinary = require('../helper/cloudinaryAuth')
 const moment = require('moment')
+const {getDistanceinKm} = require('../utils/getDistance')
+const {sumOfArray, averageOfArray} = require('../utils/AverageFunction')
 
 var date = moment().format('LLL')
 
@@ -40,28 +42,40 @@ module.exports = {
 
     // SEARCH PRODUCTS
     async search(req, res) {
-        const {name, verify} = req.params
-        console.log(name)
+        const {name, longitude, latitude, userDistance} = req.body
+        const maxDistance = userDistance ? userDistance : 5
         const regex = new RegExp(name, 'i')
         try {
             const products = await Product.find({
                 name: {
                     $in: regex
                 },
-                // location: {
-                //     $near: { // esse metodo near retorna os valores próximo a aquela localização
-                //         $geometry: {
-                //             type: 'Point',
-                //             coordinates: [longitude, latitude],
-                //         },
-                //         $maxDistance: distance ? distance : 10000,
-                //     }
-                // }
-            }).populate('category')
+            })
+            .populate('category')
             .populate('subcategory')
             .populate('seller')
 
-            return res.status(200).json(products)
+            productsDistances = []
+
+            products.map((product) => {
+                let distance = getDistanceinKm(latitude, longitude, product.seller.location.coordinates[1], product.seller.location.coordinates[0])
+                if(parseInt(distance) <= maxDistance) {
+                    productsDistances.push({product, distance: parseFloat(distance)})
+                }
+            })
+    
+            productsDistances.sort((sellerA, sellerB) => {
+                if (sellerA.distance > sellerB.distance) {
+                    return 1;
+                }
+                if (sellerA.distance < sellerB.distance) {
+                    return -1;
+                }
+
+                return 0;
+            })
+
+            return res.json(productsDistances)
         } catch (error) {
             return res.status(500).json('Erro ao retornar produtos com esse filtro')
         }
@@ -69,8 +83,13 @@ module.exports = {
 
     // CREATE NEW PRODUCT
     async create(req, res) {
-        const {seller} = req
+        const {sellerAuth} = req
+        
         const {name, price, description, category, subcategory} = req.body
+
+        if(!sellerAuth) {
+            return res.status(401).json("Acesso não autorizado")
+        }
 
         if(!name) {
             return res.status(401).json('Por favor insira o nome do produto')
@@ -80,7 +99,7 @@ module.exports = {
             return res.status(401).json('Por favor insira o preço do produto')
         }
 
-        if(description) {
+        if(!description) {
             return res.status(401).json('Por favor insira a descrição do produto')
         }
 
@@ -121,7 +140,7 @@ module.exports = {
             const product = await Product.create({
                 name,
                 price,
-                seller: seller._id,
+                seller: sellerAuth._id,
                 images,
                 publicImages,
                 category: categorySend,
@@ -129,14 +148,15 @@ module.exports = {
                 createdAt: date
             })
 
-            const seller = await Seller.findOne({_id: seller._id})
+            const seller = await Seller.findOne({_id: sellerAuth._id})
 
-        
             seller.products.push(product)
             await seller.save()
             await product.save()
+
             return res.status(201).json('Produto criado com sucesso!')
         } catch (error) {
+            console.log(error)
             return res.status(500).json('Internal Server Error')
         }
     },
@@ -182,63 +202,190 @@ module.exports = {
         }
     },
 
-    // ADD NEW COMMENT ON COMMENTS LIST
-    async addComment(req, res) {
-        const {id} = req.params
-        const {name, comment} = req.body
+    // ADD RATING ON PRODUCT
+    async addNewRating(req, res) {
+        const {user} = req; // o user já vai pra requisição pelo "isAuth" chamado na rota
+        const {id} = req.params;//id do produto a ser avaliado
+        const {rating_selected} = req.headers
+        const {comment} = req.body
+        
+        if(!user) {
+            return res.status(401).json('Acesso não autorizado')
+        }
+
+        // verify if the rating is inside the scope
+        if(rating_selected > 5 || rating_selected < 1) {
+            return res.status(400).json("Nota de avaliacao inválida")
+        }
 
         try {
-            const comments = []
-            comments.push({name: name, comment: comment})
-            await Product.findOneAndUpdate({_id: id}, {
-                $push: {
-                    comments,
-                },
-                updatedAt: date
-            })
 
-            return res.status(201).json('Comentário inserido com sucesso!')
+            const product = await Product.findById(id)
+            .populate('seller')
+            .populate('category')
+            .populate('subcategory')
 
+            
+            if(product.rating.length >= 1) { // checking if we have 1 or more ratings
+                // search for the previous rating of the user for this product
+                const userRatingIdentifier = user._id; // .toString() -> if necessary - retorna um tipo Object
+
+                const previousUserRating = await Product.find({_id: id},
+                    {rating: { $elemMatch: { userId: userRatingIdentifier } }})
+                    // console.log(previousUserRating) // to be tested
+
+                // check if the user has at least 1 rating among product's rating
+                if(previousUserRating[0].rating[0] === undefined) { // if he doesn't
+
+                    // creating a new rating
+                    console.log('Criando uma nova avaliação para o usuário')
+                    await product.updateOne({$push: {
+                        rating: [{
+                            userName: user.name,
+                            userId: user._id,
+                            productRating: rating_selected,
+                            productReview: comment
+                        }]
+                    }});
+
+                    // add the new rate value to the array of rates
+                    await product.updateOne({$push: {
+                        ratingNumbers: rating_selected
+                    }});
+
+                } else {
+                    // if the user already has a rating for the product
+                    const previousUserRatingValue = previousUserRating[0].rating[0].productRating;
+                    
+                    // update the old rating of the user 
+                    await Product.updateMany({"rating.userId": userRatingIdentifier},
+                    {$set: {
+                        "rating.$[element].userName": user.name,
+                        "rating.$[element].userId": user._id,
+                        "rating.$[element].productRating": rating_selected,
+                        "rating.$[element].productReview": comment
+
+                    }},
+                    {arrayFilters: [{"element.userId": userRatingIdentifier}]}
+                    );
+
+                    // replace the old value of rating by the new one, inside the array of ratings
+                    await Product.updateOne({_id: id, ratingNumbers: previousUserRatingValue}, 
+                        {$set: {"ratingNumbers.$": rating_selected}}
+                        )
+                };
+                
+            } else if(product.rating.length < 1) {
+                // create the first rating for the product
+                console.log('Nenhuma avaliação existente para este produto, criando uma nova')
+                // console.log(user)
+                // console.log("#####################################################################")
+                // console.log(product)
+                await product.updateOne({$push: {
+                    rating: {
+                        userName: user.name,
+                        userId: user._id,
+                        productRating: rating_selected,
+                        productReview: comment
+                    },
+                }});
+
+                await product.updateOne({$push: {
+                    ratingNumbers: rating_selected
+                }})
+            }
+
+            product.save()
         } catch (error) {
-            return res.status(500).json('Erro ao inserir o comentário.')
+            return res.status(500).json('Internal Server Error')
         }
+
+        try { // Calcs
+            // totally updated product, used to do the average calcs
+            const productUpdated = await Product.findById(id)
+            .populate('seller')
+            .populate('category')
+            .populate('subcategory')
+
+            await productUpdated.updateOne({
+                $set: { 
+                    ratingSum: sumOfArray(productUpdated.ratingNumbers),
+                    ratingAverage: averageOfArray(productUpdated.ratingNumbers)
+                } },
+                {new: true},
+            );
+
+            productUpdated.save()
+        } catch (error) {
+            return res.status(500).json('Internal server error')
+        }
+        
+
+
+        return res.status(200).json('Avaliação inserida com sucesso!')
     },
 
-    async addRating(req, res) {
-        const sa = [
-            {
-                comment: 'afhaifhseigg',
-                rating: 2
-            },
-            {
-                comment: 'afhaifhseigg',
-                rating: 4
-            },
-            {
-                comment: 'afhaifhseigg',
-                rating: 1
-            },
-            {
-                comment: 'afhaifhseigg',
-                rating: 5
-            },
-            {
-                comment: 'afhaifhseigg',
-                rating: 4
-            },
-            {
-                rating: 3
-            },
-        ]
+    // DELETE RATING ON PRODUCT
+    async deleteRating(req, res) {
+        const {user} = req; // o user já vai pra requisição pelo "isAuth" chamado na rota
+        const {id} = req.params;//id do produto a ser avaliado
 
-        let sum = 0
+        try {
+            
+            const product = await Product.findById(id)
+            .populate('seller')
+            .populate('category')
+            .populate('subcategory')
 
-        for(let i =0; i < sa.length; i++) {
-            sum+=sa[i]['rating']
+            let productDelete = await Product.findOne({_id: id})
+
+            let oldRating = productDelete.rating
+
+            const result = oldRating.find(i => i.userId.toString() === user._id.toString())
+
+            await product.updateOne(
+                {$pull: {
+                    rating: {
+                        userId: user._id
+                    },
+                    ratingNumbers: result.productRating
+                },
+            })
+        } catch (error) {
+            console.log(error)
+            return res.status(500).json('Internal Server Error')
+        }
+        
+        try { // Calcs
+            // totally updated product, used to do the average calcs
+            const productUpdated = await Product.findById(id)
+            .populate('seller')
+            .populate('category')
+            .populate('subcategory')
+
+            if(productUpdated.ratingNumbers.length === 0) {
+                await productUpdated.updateOne({
+                    $set: { 
+                        ratingSum: 0,
+                        ratingAverage: 0
+                    } },
+                    {new: true},
+                );
+            } else {
+                await productUpdated.updateOne({
+                    $set: { 
+                        ratingSum: sumOfArray(productUpdated.ratingNumbers),
+                        ratingAverage: averageOfArray(productUpdated.ratingNumbers)
+                    } },
+                    {new: true},
+                );
+            }
+
+            productUpdated.save()
+        } catch (error) {
+            return res.status(500).json('Internal server error')
         }
 
-        const result = sum / sa.length
-        
-        return res.status(200).json(Math.round(result))
+        return res.status(200).json('Avaliação excluída com sucesso!')
     }
 }

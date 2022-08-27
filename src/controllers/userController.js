@@ -5,7 +5,7 @@ const Product = require('../models/product')
 const bcrypt = require('bcrypt')
 const jwt = require('jsonwebtoken')
 const Token = require("../models/token");
-const sendMail = require("../utils/sendEmail")
+const sendEmail = require("../utils/sendEmail")
 const cloudinary = require('../helper/cloudinaryAuth')
 const moment = require('moment')
 
@@ -123,7 +123,7 @@ module.exports = {
 
             const token = jwt.sign({
                 userId: user._id
-            }, secret, {expiresIn: 3600})
+            }, secret, {expiresIn: '1h'})
 
             return res.status(200).json({user, token})
         } catch (err) {
@@ -153,14 +153,14 @@ module.exports = {
             }
 
             const sort = Math.floor(100000 + Math.random() * 900000)
-            const newToken = await new Token({
+            const newResetToken = await new Token({
                 userId: user._id,
                 token: sort,
                 expiresIn: 300,
             }).save();
 
-            const link = `${newToken.token}`;
-            await sendMail(user.email, "Redefinir senha"
+            const link = `${newResetToken.token}`;
+            await sendEmail(user.email, "Redefinir senha"
                 ,`Seu código de redefinição de senha é: ${link}`
             );
 
@@ -257,7 +257,7 @@ module.exports = {
                 updatedAt: date
             })
             
-            return res.status(201).json('Imagem alterada com sucesso!')
+            return res.status(201).json({message: 'Imagem alterada com sucesso', avatar: result.secure_url})
         } catch (error) {
             console.log(error)
             return res.status(500).json('server error, try again')
@@ -267,16 +267,19 @@ module.exports = {
 
     //RETURN ALL ITEMS IN FAVORITES LIST ON USER
     async allFavorites(req, res) {
-        const {userId} = req.query
+        const {user} = req
+
+        if(!user) {
+            return res.status(401).json("Acesso não autorizado")
+        }
 
         try {
-
-            const user = await User.findOne({_id: userId})
+            const userExist = await User.findOne({_id: user.id})
             .populate({path: 'favorites',
                 populate: 'seller',
             })
 
-            return res.status(200).json(user.favorites)
+            return res.status(200).json(userExist.favorites)
         } catch (error) {
             console.log(error)
             return res.status(500).json('Erro ao retornar os favoritos, tente novamente mais tarde!')

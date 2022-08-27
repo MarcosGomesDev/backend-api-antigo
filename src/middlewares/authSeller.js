@@ -8,12 +8,12 @@ exports.isAuthSeller = async (req, res, next) => {
         try {
             const decode = jwt.verify(token, process.env.SECRET)
 
-            const seller = await Seller.findById(decode.sellerId)
-            if(!seller) {
+            const sellerAuth = await Seller.findById(decode.sellerId)
+            if(!sellerAuth) {
                 return res.status(401).json('Autorização inválida!')
             }
 
-            req.seller = seller
+            req.sellerAuth = sellerAuth
             next()
         } catch (error) {
             if(error.name === 'JsonWebTokenError') {

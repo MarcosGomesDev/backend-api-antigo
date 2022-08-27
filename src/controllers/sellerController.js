@@ -61,7 +61,7 @@ module.exports = {
 
     //CREATE SELLER
     async register(req, res) {
-        const {name, email, password} = req.body
+        const {name, email, password, longitude, latitude} = req.body
         try {
             //Validations
             if(!name) {
@@ -92,6 +92,10 @@ module.exports = {
                 name,
                 email,
                 password: passwordHash,
+                location: {
+                    type: 'Point',
+                    coordinates: [longitude, latitude]
+                },
                 createdAt: date
             });
 
@@ -184,21 +188,21 @@ module.exports = {
 
             let token = await Token.findOne({ sellerId: seller._id });
             if (!token) {
-                token = await new Token({
+                newResetToken = await new Token({
                     userId: seller._id,
                     token: crypto.randomBytes(32).toString("hex"),
                 }).save();
             }
 
-            const link = `${process.env.BASE_URL}/seller/password-reset/${seller._id}/${token.token}`;
-            await sendEmail(seller.email, "Redefinir senha"
-            ,`Se você solicitou uma redefinição de senha para ${seller.name}, clique no link abaixo. Se você não fez essa solicitação, ignore este email.\n${link}`);
+            const link = newResetToken.token;
+            await sendEmail(user.email, "Redefinir senha"
+                ,`Seu código de redefinição de senha é: ${link}`
+            );
 
-            return res.status(200).json("Link de redefinição de senha foi enviado ao email");
-            console.log(link);
+            return res.status(200).json("Token de redefinição de senha foi enviado ao email");
         } catch (error) {
-            res.status(500).json("Algum erro ocorreu, por favor tente novamente mais tarde");
             console.log(error);
+            return res.status(500).json("Algum erro ocorreu, por favor tente novamente mais tarde");
         }
     },
 

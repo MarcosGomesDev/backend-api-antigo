@@ -22,7 +22,7 @@ exports.isAuthUser = async (req, res, next) => {
                 return res.status(400).json('Autorização inválida!')
             }
             if(error.name === 'TokenExpiredError') {
-                return res.status(400).json('Sessão expirada, por favor faça login')
+                return res.status(413).json('Sessão expirada, por favor faça login')
             }
             return res.status(500).json('Internal Server Error')
         }
