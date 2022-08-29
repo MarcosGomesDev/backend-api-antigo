@@ -11,6 +11,7 @@ const sellerRoutes = require('./src/routes/sellerRoutes')
 const productRoutes = require('./src/routes/productRoutes')
 const admRoutes = require('./src/routes/admRoutes');
 const categoryRoutes = require('./src/routes/categoryRoutes');
+const subCategoryRoutes = require('./src/routes/subCategoryRoutes')
 
 const app = express()
 
@@ -19,6 +20,7 @@ app.use(cookieParser())
 app.use(express.json())
 app.use(userRoutes)
 app.use(categoryRoutes)
+app.use(subCategoryRoutes)
 app.use(sellerRoutes)
 app.use(productRoutes)
 app.use(admRoutes)
