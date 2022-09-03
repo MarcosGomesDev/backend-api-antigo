@@ -2,8 +2,8 @@ require('dotenv').config();
 
 const mongoose = require('mongoose');
 
-mongoose.connect(process.env.URL)
+mongoose.connect(process.env.LOCAL_URL || process.env.URL)
     .then(() => {
-        console.log('our db as connect')
+        console.log('Database connected')
     })
     .catch((err) => console.log(err))

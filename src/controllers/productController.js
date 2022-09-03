@@ -104,9 +104,9 @@ module.exports = {
             return res.status(401).json('Por favor insira a descrição do produto')
         }
 
-        if (req.files.length > 3) {
-            return res.status(401).json('Quantidade de imagens não suportada')
-        }
+        // if (req.files.length > 3) {
+        //     return res.status(401).json('Quantidade de imagens não suportada')
+        // }
 
         const categorySend = await Category.findOne({name: category})
 
@@ -121,29 +121,29 @@ module.exports = {
         }
 
         try {
-            const images = []
-            const publicImages = []
+            // const images = []
+            // const publicImages = []
 
-            for (let i = 0; i < req.files.length; i++) {
-                const file = req.files[i]
+            // for (let i = 0; i < req.files.length; i++) {
+            //     const file = req.files[i]
 
-                const result = await cloudinary.uploader.upload(file.path, {
-                    public_id: `${file.filename}-${Date.now()}`,
-                    width: 500,
-                    height: 500,
-                    crop: 'fill',
-                    folder: "Products Images"
-                })
-                images.push(result.secure_url)
-                publicImages.push(result.public_id)
-            }
+            //     const result = await cloudinary.uploader.upload(file.path, {
+            //         public_id: `${file.filename}-${Date.now()}`,
+            //         width: 500,
+            //         height: 500,
+            //         crop: 'fill',
+            //         folder: "Products Images"
+            //     })
+            //     images.push(result.secure_url)
+            //     publicImages.push(result.public_id)
+            // }
 
             const product = await Product.create({
                 name,
                 price,
                 seller: sellerAuth._id,
-                images,
-                publicImages,
+                // images,
+                // publicImages,
                 category: categorySend,
                 subcategory: subCategorySend,
                 createdAt: date

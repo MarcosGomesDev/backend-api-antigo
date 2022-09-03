@@ -6,7 +6,7 @@ const upload = require('../middlewares/uploadImage')
 const sellerRoutes = express.Router()
 
 // SELLER ROUTES
-sellerRoutes.get('/sellers', isAuthSeller, seller.index) // RETURN SELLERS
+sellerRoutes.get('/sellers', isAuthSeller, seller.index) // RETURN SELLERS - // trocado o Auth pra Admin pq n entendi pq do seller buscar outros
 sellerRoutes.get('/seller', seller.seller) // RETURN SELLER
 sellerRoutes.get('/seller/products', seller.sellerProducts) // RETURN ONE SELLER AND HIS PRODUCTS
 // sellerRoutes.get('/seller', isAuthSeller, seller.logged) // RETURN LOGGED SELLER AND OUR PRODUCTS
