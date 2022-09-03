@@ -21,6 +21,7 @@ module.exports = {
                 
             return res.status(200).json(product)
         } catch (error) {
+            console.log(error)
             return res.status(500).json('Internal Server Error')
         }
     },
@@ -387,5 +388,47 @@ module.exports = {
         }
 
         return res.status(200).json('Avaliação excluída com sucesso!')
+    },
+
+    async replyRating(req, res) {
+        const {sellerAuth} = req
+        const {ratingId} = req.params
+        const {replyComment} = req.body
+
+        try {
+            await Product.updateMany({"rating._id": ratingId},
+            {$set: {
+                "rating.$[element].replyRating": {
+                    sellerId: sellerAuth._id,
+                    replyReview: replyComment
+                }
+            }},
+            {arrayFilters: [{"element._id": ratingId}]}
+            )
+
+            return res.status(201).json('Resposta enviada com sucesso!')
+        } catch (error) {
+            return res.status(500).json('Internal Server Error')
+        }
+    },
+
+    async deleteReplyRating(req, res) {
+        const {sellerAuth} = req
+        const {ratingId} = req.params
+
+        try {
+            await Product.updateMany({"rating._id": ratingId},
+            {$pull: {
+                "rating.$[element].replyRating": {
+                    sellerId: sellerAuth._id
+                }
+            }},
+            {arrayFilters: [{"element._id": ratingId}]}
+            )
+
+            return res.status(201).json("Resposta excluida com sucesso!")
+        } catch (error) {
+            console.log(error)
+        }
     }
 }

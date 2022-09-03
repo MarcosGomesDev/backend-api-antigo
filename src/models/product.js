@@ -23,7 +23,12 @@ const productSchema = Schema({
         userName: {type: String, default: ''},
         userId: {type: Schema.Types.ObjectId, ref: 'User'},
         productRating: {type: Number, default: 0},
-        productReview: {type: String, default: ''}
+        productReview: {type: String, default: ''},
+        replyRating: [{
+            sellerName: {type: String, default: ''},
+            sellerId: {type: Schema.Types.ObjectId, ref: 'Seller'},
+            replyReview: {type: String, default: ''}
+        }]
     }],
     ratingNumbers: [Number],
     ratingSum: {type: Number, default: 0},
