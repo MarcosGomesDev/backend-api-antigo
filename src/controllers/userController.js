@@ -315,7 +315,7 @@ module.exports = {
         }
     },
 
-    //REMOVE ITEM IN FAVORITES LIST ON USER
+    //REMOVE ITEM IN FAVORITES LIST ON USER // nothing
     async removeFavorites(req, res) {
         const {productId, userId} = req.query
 
