@@ -116,6 +116,7 @@ module.exports = {
         try {
             
             const result = await Seller.findByIdAndDelete({_id: seller._id})
+            console.log(result)
 
             let productsID = result.products.map((p) => p._id)
 
@@ -182,9 +183,10 @@ module.exports = {
                 return res.status(401).json('Por favor insira o email')
             }
 
-            const seller = await Seller.findOne({ email: email });
-            if (!seller)
+            const seller = await Seller.find({email: email})
+            if (!seller){
                 return res.status(401).json("Nenhum usuário encontrado com este email");
+            }                
 
             let token = await Token.findOne({ sellerId: seller._id });
             if (!token) {
