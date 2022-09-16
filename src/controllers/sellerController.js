@@ -15,16 +15,15 @@ var date = moment().format('LLL')
 module.exports = {
     //RETURN ALL SELLERS
     async index(req, res) {
-
         const sellers = await Seller.find().populate('products')
         return res.json(sellers)
     },
 
-    async seller(req, res) {
-        const {sellerId} = req.query
+    async selected(req, res) {
+        const {id} = req.params
 
         try {
-            const seller = await Seller.findOne({_id: sellerId}).populate('products')
+            const seller = await Seller.findOne({_id: id}).populate('products')
 
             return res.status(200).json(seller)
         } catch (error) {
@@ -32,31 +31,19 @@ module.exports = {
         }
     },
 
-    async sellerProducts(req, res) {
-        const {sellerId} = req.query
+    async productsBySeller(req, res) {
+        const {sellerAuth} = req
 
         try {
-            const seller = await Product.find({seller: sellerId})
-                .populate('seller')
-                .populate('category')
-                .populate('subcategory')
-                
-            return res.status(200).json(seller)
+            const products = await Product.find({seller: sellerAuth._id})
+            .populate('seller')
+            .populate('category')
+            .populate('subcategory')
+
+            return res.status(200).json(products)
         } catch (error) {
             return res.status(500).json(error)
         }
-    },
-
-    // RETURN ONLY THE LOGGED SELLER
-    async logged(req, res) {
-        const {seller} = req
-        if(!seller) {
-            return res.status(401).json('Invalid authorization')
-        }
-
-        const logged = await Seller.findOne({_id: seller._id}).populate('products')
-
-        return res.status(200).json(logged)
     },
 
     //CREATE SELLER

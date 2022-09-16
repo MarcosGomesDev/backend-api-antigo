@@ -123,7 +123,7 @@ module.exports = {
 
             const token = jwt.sign({
                 userId: user._id
-            }, secret, {expiresIn: '1h'})
+            }, secret, {expiresIn: '1d'})
 
             return res.status(200).json({user, token})
         } catch (err) {
@@ -162,11 +162,11 @@ module.exports = {
             const link = `${newResetToken.token}`;
             await sendEmail(user.email, "Redefinir senha"
                 ,`Seu código de redefinição de senha é: ${link}`
-            );
-
+            )
+            
             return res.status(200).json("Token de redefinição de senha foi enviado ao email");
         } catch (error) {
-            console.log(error)
+            console.log('ta caindo nesse erro', error)
             return res.status(500).json("Algum erro ocorreu, tente novamente mais tarde");
         }
     },
@@ -267,14 +267,10 @@ module.exports = {
 
     //RETURN ALL ITEMS IN FAVORITES LIST ON USER
     async allFavorites(req, res) {
-        const {user} = req
-
-        if(!user) {
-            return res.status(401).json("Acesso não autorizado")
-        }
+        const {userAuth} = req
 
         try {
-            const userExist = await User.findOne({_id: user.id})
+            const userExist = await User.findOne({_id: userAuth._id})
             .populate({path: 'favorites',
                 populate: 'seller',
             })
@@ -288,10 +284,11 @@ module.exports = {
 
     //ADD NEW ITEM IN FAVORITES LIST ON USER
     async addFavorites(req, res) {
-        const {productId, userId} = req.query
+        const {productId, userId} = req.params
 
         try {
             const favorites = []
+            
             const product = await Product.findOne({_id: productId})
             .populate('category')
             .populate('subcategory')
@@ -310,17 +307,17 @@ module.exports = {
 
             return res.status(200).json('Produto adicionado aos favoritos com sucesso!')
         } catch (error) {
-            console.log(error)
             return res.status(500).json('Erro ao adicionar aos favoritos, tente novamente mais tarde!')
         }
     },
 
     //REMOVE ITEM IN FAVORITES LIST ON USER
     async removeFavorites(req, res) {
-        const {productId, userId} = req.query
+        const {userAuth} = req
+        const {productId} = req.query
 
         try {
-            await User.findOneAndUpdate({_id: userId}, {
+            await User.findOneAndUpdate({_id: userAuth._id}, {
                 $pull: {
                     favorites: productId
                 },
