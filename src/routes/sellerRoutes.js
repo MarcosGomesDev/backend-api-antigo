@@ -8,8 +8,8 @@ const sellerRoutes = express.Router()
 
 // SELLER ROUTES
 sellerRoutes.get('/sellers', seller.index) // RETURN SELLERS
-sellerRoutes.get('/seller/:id', seller.selected) // RETURN SELLER
 sellerRoutes.get('/seller/products', isAuthSeller, seller.productsBySeller)
+sellerRoutes.get('/seller/:id', seller.selected) // RETURN SELLER
 sellerRoutes.post('/sign-up/seller', seller.register) // CREATE NEW SELLER
 sellerRoutes.post('/sign-in/seller', seller.login) // LOGIN SELLER
 sellerRoutes.post('/seller/forgot-password', seller.forgotPassword) // SEND LINK TO RESET PASSSWORD

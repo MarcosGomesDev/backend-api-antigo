@@ -89,7 +89,7 @@ module.exports = {
         const {sellerAuth} = req
 
         const {name, price, description, category, subcategory} = req.body
-        console.log(req.body)
+
         if(!name) {
             return res.status(401).json('Por favor insira o nome do produto')
         }
@@ -165,36 +165,36 @@ module.exports = {
     async update(req, res) {
         const {sellerAuth} = req
         const {id} = req.params
-        // const {name, price, description, category, subcategory} = req.body
-
+        const {name, price, description, category, subcategory} = req.body
+        console.log(req.files)
         if(!id) {
             return res.status(400).json('Produto não existe!')
         }
 
-        // if(!name) {
-        //     return res.status(400).json('O nome não pode ser vazio!')
-        // }
+        if(!name) {
+            return res.status(400).json('O nome não pode ser vazio!')
+        }
 
-        // if(!price) {
-        //     return res.status(400).json('O preço não pode ser vazio!')
-        // }
+        if(!price) {
+            return res.status(400).json('O preço não pode ser vazio!')
+        }
 
-        // if(!description) {
-        //     return res.status(400).json('A descrição não pode ser vazia!')
-        // }
+        if(!description) {
+            return res.status(400).json('A descrição não pode ser vazia!')
+        }
 
         try {
-            // const categorySend = await Category.findOne({name: category})
+            const categorySend = await Category.findOne({name: category})
 
-            // if(!categorySend) {
-            //     return res.status(401).json('Categoria não existe, por favor escolha outra')
-            // }
+            if(!categorySend) {
+                return res.status(401).json('Categoria não existe, por favor escolha outra')
+            }
     
-            // const subCategorySend = await subCategory.findOne({name: subcategory})
+            const subCategorySend = await subCategory.findOne({name: subcategory})
     
-            // if(!subCategorySend) {
-            //     return res.status(401).json('Sub Categoria não existe, por favor escolha outra')
-            // }
+            if(!subCategorySend) {
+                return res.status(401).json('Sub Categoria não existe, por favor escolha outra')
+            }
 
             const product = await Product.findById(id)
             .populate('seller')
@@ -206,45 +206,40 @@ module.exports = {
                 return res.status(400).json('Este produto não existe!')
             }
 
-            // if(req.files.length > 1){
-            //     const images = []
-            //     const publicImages = []
+            if(req.files.length > 0){
+                const newImages = []
+                const newPublicImages = []
 
-            //     const imagesExists = product.images
-            //     const imagesByBody = req.files
+                for (let i = 0; i < req.files.length; i++) {
+                    const file = req.files[i]
 
-            //     if(JSON.stringify(imagesByBody) === JSON.stringify(imagesExists)) {
-            //         return res.json('as imagens são iguais')
-            //     } else {
-            //         console.log('as imagens são diferentes!')
-            //     }
-                
+                    const result = await cloudinary.uploader.upload(file.path, {
+                        public_id: `${file.filename}-${Date.now()}`,
+                        width: 500,
+                        height: 500,
+                        crop: 'fill',
+                        folder: "Products Images"
+                    })
+                    newImages.push(result.secure_url)
+                    newPublicImages.push(result.public_id)
+                }
+            }
 
-                // for (let i = 0; i < req.files.length; i++) {
-                //     const file = req.files[i]
+            await product.updateOne({
+                $set: {
+                    name: name !== product.name ? name : product.name,
+                    price: price !== product.price ? price : product.price,
+                    category: categorySend !== product.category ? categorySend : product.category,
+                    subcategory: subCategorySend !== product.subcategory ? subCategorySend : product.subcategory,
+                    images: req.files.length > 0 ? newImages : product.images,
+                    publicImages: req.files.length > 0 ? newPublicImages : product.publicImages,
+                    updatedAt: date
+                }
+            })
 
-                //     const result = await cloudinary.uploader.upload(file.path, {
-                //         public_id: `${file.filename}-${Date.now()}`,
-                //         width: 500,
-                //         height: 500,
-                //         crop: 'fill',
-                //         folder: "Products Images"
-                //     })
-                //     images.push(result.secure_url)
-                //     publicImages.push(result.public_id)
-                // }
-            // }
-
-            // product.updateOne({
-            //     $push: {
-            //         name: name !== product.name ? name : product.name,
-            //         price: price !== product.price ? price : product.price,
-            //         category: categorySend.name !== product.category.name ? categorySend.name : product.category.name,
-            //         subcategory: subCategorySend.name !== product.subcategory.name ? subCategorySend.name : product.subcategory.name,
-            //         updatedAt: date
-            //     }
-            // })
+            return res.status(201).json('Produto atualizado com sucesso!')
         } catch (error) {
+            console.log(error)
             return res.status(500).json('Internal Server Error')
         }
     },

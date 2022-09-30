@@ -49,20 +49,21 @@ module.exports = {
     //CREATE SELLER
     async register(req, res) {
         const {name, email, password, longitude, latitude} = req.body
+        
+        //Validations
+        if(!name) {
+            return res.status(401).json('O nome é obrigatório!')
+        }
+
+        if(!email) {
+            return res.status(401).json('O email é obrigatório!')
+        }
+
+        if(!password) {
+            return res.status(401).json('A senha é obrigatória!')
+        }
+
         try {
-            //Validations
-            if(!name) {
-                return res.status(401).json('O nome é obrigatório!')
-            }
-
-            if(!email) {
-                return res.status(401).json('O email é obrigatório!')
-            }
-
-            if(!password) {
-                return res.status(401).json('A senha é obrigatória!')
-            }
-
             // VERIFIED IF SELLER EXISTS
             const sellerExist = await Seller.findOne({email: email})
 
@@ -79,10 +80,6 @@ module.exports = {
                 name,
                 email,
                 password: passwordHash,
-                location: {
-                    type: 'Point',
-                    coordinates: [longitude, latitude]
-                },
                 createdAt: date
             });
 

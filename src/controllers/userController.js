@@ -7,7 +7,8 @@ const jwt = require('jsonwebtoken')
 const Token = require("../models/token");
 const sendEmail = require("../utils/sendEmail")
 const cloudinary = require('../helper/cloudinaryAuth')
-const moment = require('moment')
+const moment = require('moment');
+const { request } = require('express');
 
 var date = moment().format('LLL')
 
@@ -94,7 +95,7 @@ module.exports = {
     // Login user
     async login(req, res) {
         const {email, password} = req.body
-
+        console.log(req.body)
         //Validations
         if(!email) {
             return res.status(401).json('O email é obrigatório!')
@@ -110,15 +111,14 @@ module.exports = {
         if(!password) {
             return res.status(401).json('A senha é obrigatória!')
         }
-
-        //Check if password match
-        const checkPassword = await bcrypt.compare(password, user.password)
-
-        if(!checkPassword) {
-            return res.status(401).json('Senha inválida!')
-        }
-
         try {
+            //Check if password match
+            const checkPassword = bcrypt.compare(password, user.password)
+    
+            if(!checkPassword) {
+                return res.status(401).json('Senha inválida!')
+            }   
+
             const secret = process.env.SECRET
 
             const token = jwt.sign({
@@ -127,7 +127,8 @@ module.exports = {
 
             return res.status(200).json({user, token})
         } catch (err) {
-            return res.json({error: 'Erro ao logar usuário, tente novamente mais tarde!'})
+            console.log(err)
+            return res.status(500).json('Erro ao logar usuário, tente novamente mais tarde!')
         }
     },
 
@@ -266,7 +267,7 @@ module.exports = {
     },
 
     //RETURN ALL ITEMS IN FAVORITES LIST ON USER
-    async allFavorites(req, res) {
+    async allFav(req, res) {
         const {userAuth} = req
 
         try {
@@ -283,23 +284,23 @@ module.exports = {
     },
 
     //ADD NEW ITEM IN FAVORITES LIST ON USER
-    async addFavorites(req, res) {
-        const {productId, userId} = req.params
+    async addToFavorites(req, res) {
+        const {id, userId} = req.params
 
         try {
-            const favorites = []
+            const list = []
             
-            const product = await Product.findOne({_id: productId})
+            const product = await Product.findOne({_id: id})
             .populate('category')
             .populate('subcategory')
             .populate('seller')
 
-            favorites.push(product)
+            list.push(product)
             
             await User.findOneAndUpdate({_id: userId},
                 {
                     $push: {
-                        favorites
+                        favorites: list,
                     },
                     updatedAt: date
                 }
