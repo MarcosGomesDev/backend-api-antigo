@@ -43,7 +43,8 @@ module.exports = {
 
     // SEARCH PRODUCTS
     async search(req, res) {
-        const {name, longitude, latitude, userDistance} = req.body
+        const {name} = req.params
+        const {longitude, latitude, userDistance} = req.body
         const maxDistance = userDistance ? userDistance : 5
         const regex = new RegExp(name, 'i')
         try {
@@ -56,28 +57,29 @@ module.exports = {
             .populate('subcategory')
             .populate('seller')
 
-            productsDistances = []
+            // productsDistances = []
 
-            products.map((product) => {
-                let distance = getDistanceinKm(latitude, longitude, product.seller.location.coordinates[1], product.seller.location.coordinates[0])
-                if(parseInt(distance) <= maxDistance) {
-                    productsDistances.push({product, distance: parseFloat(distance)})
-                }
-            })
+            // products.map((product) => {
+            //     let distance = getDistanceinKm(latitude, longitude, product.seller.location.coordinates[1], product.seller.location.coordinates[0])
+            //     if(parseInt(distance) <= maxDistance) {
+            //         productsDistances.push({product, distance: parseFloat(distance)})
+            //     }
+            // })
     
-            productsDistances.sort((sellerA, sellerB) => {
-                if (sellerA.distance > sellerB.distance) {
-                    return 1;
-                }
-                if (sellerA.distance < sellerB.distance) {
-                    return -1;
-                }
+            // productsDistances.sort((sellerA, sellerB) => {
+            //     if (sellerA.distance > sellerB.distance) {
+            //         return 1;
+            //     }
+            //     if (sellerA.distance < sellerB.distance) {
+            //         return -1;
+            //     }
 
-                return 0;
-            })
+            //     return 0;
+            // })
 
-            return res.json(productsDistances)
+            return res.json(products)
         } catch (error) {
+            console.log(error)
             return res.status(500).json('Erro ao retornar produtos com esse filtro')
         }
     },
@@ -85,12 +87,8 @@ module.exports = {
     // CREATE NEW PRODUCT
     async create(req, res) {
         const {sellerAuth} = req
-        
-        const {name, price, description, category, subcategory} = req.body
 
-        if(!sellerAuth) {
-            return res.status(401).json("Acesso não autorizado")
-        }
+        const {name, price, description, category, subcategory} = req.body
 
         if(!name) {
             return res.status(401).json('Por favor insira o nome do produto')
@@ -141,6 +139,7 @@ module.exports = {
             const product = await Product.create({
                 name,
                 price,
+                description,
                 seller: sellerAuth._id,
                 // images,
                 // publicImages,
@@ -164,8 +163,85 @@ module.exports = {
 
     //UPDATE PRODUCT
     async update(req, res) {
-        const _id = req.query
-        const {name, price, description} = req.body
+        const {sellerAuth} = req
+        const {id} = req.params
+        const {name, price, description, category, subcategory} = req.body
+        console.log(req.files)
+        if(!id) {
+            return res.status(400).json('Produto não existe!')
+        }
+
+        if(!name) {
+            return res.status(400).json('O nome não pode ser vazio!')
+        }
+
+        if(!price) {
+            return res.status(400).json('O preço não pode ser vazio!')
+        }
+
+        if(!description) {
+            return res.status(400).json('A descrição não pode ser vazia!')
+        }
+
+        try {
+            const categorySend = await Category.findOne({name: category})
+
+            if(!categorySend) {
+                return res.status(401).json('Categoria não existe, por favor escolha outra')
+            }
+    
+            const subCategorySend = await subCategory.findOne({name: subcategory})
+    
+            if(!subCategorySend) {
+                return res.status(401).json('Sub Categoria não existe, por favor escolha outra')
+            }
+
+            const product = await Product.findById(id)
+            .populate('seller')
+            .populate('category')
+            .populate('subcategory')
+
+
+            if(!product) {
+                return res.status(400).json('Este produto não existe!')
+            }
+
+            if(req.files.length > 0){
+                const newImages = []
+                const newPublicImages = []
+
+                for (let i = 0; i < req.files.length; i++) {
+                    const file = req.files[i]
+
+                    const result = await cloudinary.uploader.upload(file.path, {
+                        public_id: `${file.filename}-${Date.now()}`,
+                        width: 500,
+                        height: 500,
+                        crop: 'fill',
+                        folder: "Products Images"
+                    })
+                    newImages.push(result.secure_url)
+                    newPublicImages.push(result.public_id)
+                }
+            }
+
+            await product.updateOne({
+                $set: {
+                    name: name !== product.name ? name : product.name,
+                    price: price !== product.price ? price : product.price,
+                    category: categorySend !== product.category ? categorySend : product.category,
+                    subcategory: subCategorySend !== product.subcategory ? subCategorySend : product.subcategory,
+                    images: req.files.length > 0 ? newImages : product.images,
+                    publicImages: req.files.length > 0 ? newPublicImages : product.publicImages,
+                    updatedAt: date
+                }
+            })
+
+            return res.status(201).json('Produto atualizado com sucesso!')
+        } catch (error) {
+            console.log(error)
+            return res.status(500).json('Internal Server Error')
+        }
     },
 
     // REMOVE PRODUCT FROM DB AND PRODUCTS LIST FROM SELLER

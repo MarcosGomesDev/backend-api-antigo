@@ -11,14 +11,14 @@ module.exports = {
     },
     
     async create(req, res) {
-        const {user} = req
+        const {userAuth} = req
         const {name} = req.body
         
-        if(!user) {
+        if(!userAuth) {
             return res.status(401).json('Invalid authorization')
         }
 
-        if(user.admin != true) {
+        if(userAuth.admin != true) {
             return res.status(401).json('Invalid authorization, u are not administrator')
         }
 
@@ -35,7 +35,7 @@ module.exports = {
         try {
             const category = new Category({
                 name: name,
-                createdBy: user._id
+                createdBy: userAuth._id
             })
 
             await category.save()
