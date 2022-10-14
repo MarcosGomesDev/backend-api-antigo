@@ -171,7 +171,7 @@ module.exports = {
         }
     },
 
-    async verifyToken(req, res) {
+    async verifyToken(req, res) { // VErify token to reset password
         const {email} = req.query
         const {token} = req.body
 

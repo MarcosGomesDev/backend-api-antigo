@@ -53,11 +53,15 @@ module.exports = {
             return res.status(401).json('Autorização inválida!')
         }
 
+        console.log(cat)
+
         let query = {category: cat}
         let newObj = {$set: {category: null}}
 
         try {
-            await Category.findByIdAndDelete({_id: cat})
+            console.log('teste')
+            const toDelete = await Category.findById({_id: cat});
+            console.log(toDelete)
             await Product.updateMany(query, newObj)
 
             return res.status(200).json('Categoria deletada com sucesso!')
