@@ -8,12 +8,14 @@ const productRoutes = express.Router()
 
 // PRODUCT ROUTES
 productRoutes.get('/products', product.index) // RETURN ALL PRODUCTS
+productRoutes.get('/products/search/:name', product.search) // SEARCH ANY PRODUCT
 productRoutes.get('/product', product.oneProduct) // RETURN ONE PRODUCT
 productRoutes.get('/products/search', product.search) // SEARCH ANY PRODUCT
 productRoutes.post('/product/create', isAuthSeller, /*upload.array('images', 3),*/ product.create) // CREATE NEW PRODUCT
 productRoutes.post('/product/edit') // EDIT PRODUCT ????????? 
 productRoutes.post('/product/:id', /*upload.array('images'),*/ product.update) // UPDATE PRODUCT
 productRoutes.post('/product/rating/:id', isAuthUser, product.addNewRating) // ADD NEW RATING
+productRoutes.post('/product/:id/update', isAuthSeller, upload.array('images', 3), product.update)
 productRoutes.put('/product/rating/delete/:id', isAuthUser, product.deleteRating) // DELETE PRODUCT
 productRoutes.post('/product/:id/rating/:ratingId', isAuthSeller, product.replyRating)
 productRoutes.put('/product/:id/rating/:ratingId', isAuthSeller, product.deleteReplyRating)

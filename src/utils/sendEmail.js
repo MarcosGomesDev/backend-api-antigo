@@ -2,21 +2,19 @@ require('dotenv').config()
 
 const nodemailer = require("nodemailer");
 
-const {host, port, user, pass} = require('./mail.json')
-
 const sendEmail = async (email, subject, text) => {
     try {
         const transporter = nodemailer.createTransport({
-            host,
-            port,
+            host: process.env.HOST,
+            port: process.env.PORT,
             auth: {
-                user,
-                pass
+                user: process.env.USER_EMAIL,
+                pass: process.env.PASS
             }
         });
 
         await transporter.sendMail({
-            from: user,
+            from: process.env.USER_EMAIL,
             to: email,
             subject: subject,
             text: text,
