@@ -15,7 +15,7 @@ module.exports = {
 
     async create(req, res) {
         const {userAuth} = req
-        const {name, category} = req.body
+        const {name} = req.body
 
         if(!userAuth) {
             return res.status(401).json('Invalid authorization')
@@ -23,12 +23,6 @@ module.exports = {
 
         if(userAuth.admin != true) {
             return res.status(401).json('Invalid authorization, u are not administrator')
-        }
-
-        const categoryExist = await Category.findOne({name: category})
-
-        if(!categoryExist) {
-            return res.status(401).json('Category not found')
         }
 
         if(!name) {
@@ -47,9 +41,7 @@ module.exports = {
                 createdBy: userAuth._id,
                 createdAt: date
             })
-
-            categoryExist.sub_categories.push(result)
-            await categoryExist.save()
+            
             await result.save()
 
             return res.status(201).json('Sub Categoria criada com sucesso')

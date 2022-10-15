@@ -5,7 +5,7 @@ const Product = require('../models/product')
 
 module.exports = {
     async index(req, res) {
-        const categories = await Category.find().populate('sub_categories')
+        const categories = await Category.find()
 
         return res.status(200).json(categories)
     },

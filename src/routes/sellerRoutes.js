@@ -15,6 +15,8 @@ sellerRoutes.post('/sign-in/seller', seller.login) // LOGIN SELLER
 sellerRoutes.post('/seller/forgot-password', seller.forgotPassword) // SEND LINK TO RESET PASSSWORD
 sellerRoutes.post('/seller/valid-token', seller.verifyToken) // VERIFY VALID TOKEN RESET PASSWORD
 sellerRoutes.post('/seller/reset-password', seller.resetPassword) // RESET PASSWORD AND SAVE IN BD
+sellerRoutes.post('/cep', seller.getLatLong)
+sellerRoutes.post('/socialmedias', seller.insertSocialMedias) //INSERT SOCIAL MEDIAS OF SELLER
 sellerRoutes.post('/seller/upload-profile', isAuthSeller, upload.single('avatar'), seller.uploadProfile) // SAVE PROFILE
 sellerRoutes.delete('/seller/delete', isAuthSeller, seller.delete) // DELETE SELLER
 

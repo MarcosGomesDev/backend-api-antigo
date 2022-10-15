@@ -18,6 +18,7 @@ module.exports = {
                 .populate('category')
                 .populate('subcategory')
                 .populate('seller')
+                .populate('rating.userId')
                 
             return res.status(200).json(product)
         } catch (error) {
@@ -28,21 +29,23 @@ module.exports = {
 
     // RETURN ONE PRODUCT BY ID
     async oneProduct(req, res) {
-        const {productId} = req.query
+        const {id} = req.params
         try {
-            const product = await Product.findOne({_id: productId})
+            const product = await Product.findOne({_id: id})
                 .populate('category')
                 .populate('subcategory')
                 .populate('seller')
+                .populate('rating.userId')
 
             return res.status(200).json(product)
         } catch (error) {
+            console.log(error)
             return res.status(500).json('Internal Server Error')
         }
     },
 
     // SEARCH PRODUCTS
-    async search(req, res) {
+    async search(req, res) {    
         const {name} = req.params
         const {longitude, latitude, userDistance} = req.body
         const maxDistance = userDistance ? userDistance : 5
@@ -56,6 +59,7 @@ module.exports = {
             .populate('category')
             .populate('subcategory')
             .populate('seller')
+            .populate('rating.userId')
 
             // productsDistances = []
 
@@ -166,7 +170,7 @@ module.exports = {
         const {sellerAuth} = req
         const {id} = req.params
         const {name, price, description, category, subcategory} = req.body
-        console.log(req.files)
+
         if(!id) {
             return res.status(400).json('Produto não existe!')
         }
@@ -281,13 +285,21 @@ module.exports = {
 
     // ADD RATING ON PRODUCT
     async addNewRating(req, res) {
-        const {user} = req; // o user já vai pra requisição pelo "isAuth" chamado na rota
+        const {userAuth} = req; // o user já vai pra requisição pelo "isAuth" chamado na rota
         const {id} = req.params;//id do produto a ser avaliado
-        const {rating_selected} = req.headers
-        const {comment} = req.body
-        
-        if(!user) {
+        // const {rating_selected} = req.headers
+        const {comment, rating_selected} = req.body
+
+        if(!userAuth) {
             return res.status(401).json('Acesso não autorizado')
+        }
+
+        if(!comment) {
+            return res.status(400).json('O comentário não pode ser vazio')
+        }
+
+        if(!rating_selected) {
+            return res.status(400).json('Nota inválida')
         }
 
         // verify if the rating is inside the scope
@@ -305,7 +317,7 @@ module.exports = {
             
             if(product.rating.length >= 1) { // checking if we have 1 or more ratings
                 // search for the previous rating of the user for this product
-                const userRatingIdentifier = user._id; // .toString() -> if necessary - retorna um tipo Object
+                const userRatingIdentifier = userAuth._id; // .toString() -> if necessary - retorna um tipo Object
 
                 const previousUserRating = await Product.find({_id: id},
                     {rating: { $elemMatch: { userId: userRatingIdentifier } }})
@@ -318,8 +330,8 @@ module.exports = {
                     console.log('Criando uma nova avaliação para o usuário')
                     await product.updateOne({$push: {
                         rating: [{
-                            userName: user.name,
-                            userId: user._id,
+                            userName: userAuth.name,
+                            userId: userAuth._id,
                             productRating: rating_selected,
                             productReview: comment
                         }]
@@ -337,8 +349,8 @@ module.exports = {
                     // update the old rating of the user 
                     await Product.updateMany({"rating.userId": userRatingIdentifier},
                     {$set: {
-                        "rating.$[element].userName": user.name,
-                        "rating.$[element].userId": user._id,
+                        "rating.$[element].userName": userAuth.name,
+                        "rating.$[element].userId": userAuth._id,
                         "rating.$[element].productRating": rating_selected,
                         "rating.$[element].productReview": comment
 
@@ -360,8 +372,8 @@ module.exports = {
                 // console.log(product)
                 await product.updateOne({$push: {
                     rating: {
-                        userName: user.name,
-                        userId: user._id,
+                        userName: userAuth.name,
+                        userId: userAuth._id,
                         productRating: rating_selected,
                         productReview: comment
                     },
@@ -399,16 +411,15 @@ module.exports = {
         
 
 
-        return res.status(200).json('Avaliação inserida com sucesso!')
+        return res.status(201).json('Avaliação inserida com sucesso!')
     },
 
     // DELETE RATING ON PRODUCT
     async deleteRating(req, res) {
-        const {user} = req; // o user já vai pra requisição pelo "isAuth" chamado na rota
+        const {userAuth} = req; // o user já vai pra requisição pelo "isAuth" chamado na rota
         const {id} = req.params;//id do produto a ser avaliado
 
         try {
-            
             const product = await Product.findById(id)
             .populate('seller')
             .populate('category')
@@ -418,12 +429,12 @@ module.exports = {
 
             let oldRating = productDelete.rating
 
-            const result = oldRating.find(i => i.userId.toString() === user._id.toString())
+            const result = oldRating.find(i => i.userId.toString() === userAuth._id.toString())
 
             await product.updateOne(
                 {$pull: {
                     rating: {
-                        userId: user._id
+                        userId: userAuth._id
                     },
                     ratingNumbers: result.productRating
                 },
