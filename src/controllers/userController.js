@@ -60,6 +60,7 @@ module.exports = {
             email,
             password: passwordHash,
             admin: false,
+            seller: false,
             createdAt: moment().format('LLL')
         });
 
@@ -95,7 +96,6 @@ module.exports = {
     // Login user
     async login(req, res) {
         const {email, password} = req.body
-        console.log(req.body)
         //Validations
         if(!email) {
             return res.status(401).json('O email é obrigatório!')
@@ -233,11 +233,13 @@ module.exports = {
 
     //UPLOAD PROFILE
     async uploadProfile(req, res) {
-        const {user} = req
+        const {userAuth} = req
         
-        if(!user) {
+        if(!userAuth) {
             return res.status(401).json("Acesso não autorizado")
         }
+
+        const user = await User.findOne({_id: userAuth._id})
 
         if(user.avatar === true) {
             await cloudinary.uploader.destroy(user.avatarId)

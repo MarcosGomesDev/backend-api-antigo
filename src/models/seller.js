@@ -8,6 +8,7 @@ const sellerSchema = Schema({
     password: {type: String},
     address: {type: String},
     avatar: {type: String},
+    seller: {type: Boolean},
     avatarId: String,
     products: [{
         type: Schema.Types.ObjectId,
@@ -17,6 +18,16 @@ const sellerSchema = Schema({
         type: PointSchema,
         index: '2dsphere'
     },
+    address: [
+        {
+            type: String
+        }
+    ],
+    socialMedias: [
+        {
+            type: String
+        }
+    ],
     createdAt: {type: String},
     updatedAt: {type: String}
 });

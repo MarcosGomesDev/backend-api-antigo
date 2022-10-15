@@ -7,6 +7,7 @@ const userSchema = new Schema({
     password: {type: String},
     avatar: String,
     avatarId: String,
+    seller: {type: Boolean},
     admin: Boolean,
     favorites: [{
         type: Schema.Types.ObjectId,

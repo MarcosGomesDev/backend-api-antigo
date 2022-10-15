@@ -9,7 +9,7 @@ const Token = require("../models/token");
 const sendEmail = require("../utils/sendEmail")
 const cloudinary = require('../helper/cloudinaryAuth')
 const moment = require('moment')
-
+const CepCoords = require('coordenadas-do-cep')
 var date = moment().format('LLL')
 
 module.exports = {
@@ -48,21 +48,43 @@ module.exports = {
 
     //CREATE SELLER
     async register(req, res) {
-        const {name, email, password, longitude, latitude} = req.body
+        const {
+            name,
+            email,
+            password,
+            cep,
+            logradouro,
+            numero,
+            complemento,
+            bairro,
+            localidade,
+            UF
+        } = req.body
         
         //Validations
-        if(!name) {
-            return res.status(401).json('O nome é obrigatório!')
-        }
+        if(!name) return res.status(401).json('O nome é obrigatório!');
 
-        if(!email) {
-            return res.status(401).json('O email é obrigatório!')
-        }
+        if(!email) return res.status(401).json('O email é obrigatório!');
 
-        if(!password) {
-            return res.status(401).json('A senha é obrigatória!')
-        }
+        if(!password) return res.status(401).json('A senha é obrigatória!');
 
+        //VERIFICA SE O CEP DO ENDEREÇO FOI INSERIDO
+        if(!cep) return res.status(401).json('O cep é obrigatório!');
+
+        //VERIFICA SE O ENDEREÇO FOI INSERIDO
+        if(!logradouro) return res.status(401).json('O nome da rua é obrigatório!');
+
+        //VERIFICA SE O NÚMERO DO ENDEREÇO FOI INSERIDO
+        if(!numero) return res.status(401).json('O número do endereço é obrigatório!');
+
+        //VERIFICA SE O BAIRRO FOI INSERIDO
+        if(!bairro) return res.status(401).json('O bairro é obrigatório!');
+
+        //VERIFICA SE A CIDADE FOI INSERIDA
+        if(!localidade) return res.status(401).json('A cidade é obrigatória!');
+
+        //VERIFICA SE O ESTADO FOI INSERIDO
+        if(!UF) return res.status(401).json('O estado é obrigatório!');
         try {
             // VERIFIED IF SELLER EXISTS
             const sellerExist = await Seller.findOne({email: email})
@@ -70,6 +92,9 @@ module.exports = {
             if(sellerExist) {
                 return res.status(401).json('Este email já está sendo utilizado!')
             }
+
+            //OBTÉM A LATITUDE E LONGITUDE DO ENDEREÇO
+            const info = await CepCoords.getByCep(cep)
 
             // HASHING THE PASSWORD
             const salt = await bcrypt.genSalt(12)
@@ -79,7 +104,22 @@ module.exports = {
             const seller = new Seller({
                 name,
                 email,
+                seller: true,
+                admin: false,
                 password: passwordHash,
+                location: {
+                    type: 'Point',
+                    coordinates: [info.lon, info.lat],
+                },
+                address: [{
+                    cep: cep,
+                    street: logradouro,
+                    number: numero,
+                    complement: complemento,
+                    neighborhood: bairro,
+                    city: localidade,
+                    state: UF
+                }],
                 createdAt: date
             });
 
@@ -276,6 +316,43 @@ module.exports = {
         } catch (error) {
             console.log('erro ao subir imagem', error)
             return res.status(500).json('Erro ao alterar a imagem, por favor tente novamente mais tarde!')
+        }
+    },
+
+    async insertSocialMedias(req, res) {
+        const {sellerAuth} = req
+        const {instagram, whatsapp, facebook} = req.body
+
+        try {
+            await Seller.findByIdAndUpdate(sellerAuth._id, {
+                $push: {
+                    socialMedias: {
+                        instagram: instagram,
+                        whatsapp: whatsapp,
+                        facebook: facebook
+                    }
+                }
+            })
+
+            return res.status(201).json('dados salvos com sucesso!')
+        } catch (error) {
+            return res.status(500).json('Internal Server Error')
+        }
+    },
+
+    async getLatLong(req, res) {
+        const {cep} = req.body
+
+        try {
+            const info = await CepCoords.getByCep(cep)
+            const coords = [
+                {lat: info.lat},
+                {long: info.lon}
+            ]
+            return res.json(info)
+        } catch (error) {
+            console.log(error)
+            return res.status(500).json('deu erro')
         }
     }
 };
